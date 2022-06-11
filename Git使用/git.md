@@ -1,62 +1,106 @@
 ### 开发代码时如何合入
 
 ​	分两种，有upstream的和无upstream的。有upstream的就是fork的别人的仓，无upstream的就是自己建的仓。
+
 ​	两种情况都要遵循一条原则，开发的代码不要直接commit到main分支，所有的开发代码的commit都在其它分支上进行，main分支用于同步。
+
 ​	代码拉下来之后，最好先
+
 ​		git remote add origin <仓库地址>
+
 ​		git remote add upstream <仓库地址>
+
 ​		git remote -v
+
 ​	设置好远程仓库地址。
 
-```
-	对于个人的仓，要开发时先切换到这次要开发的特性的分支(以下以workbr为名)，然后在分支上开发。在新的分支上开发完成并commit之后，要先
-		git fetch origin (更新本地的远程分支)
-    	git checkout main
-    	git merge origin/main (这里写成git merge origin main不行，会提示"merge: origin - not something we can merge"，会把origin当成一个分支)
-	更新最新的远程分支到本地main分支(或者直接git pull origin main)，如果正常操作，这次合并不会有冲突，而是fast-forward的合并(因为本地main分支是远程main分支的子集)。然后
-		git checkout workbr
-		git rebase main
-		git checkout main
-		git merge workbr  (fast-forward的合并)
-		git push orgin main
-	这样就将开发完成的代码合并到本地main分支并同步到远程仓。合并之后特性分支就没用了，然后
-		git branch -d workbr
-		git push origin --delete workbr 或 git push origin -d workbr
-	分别删除本地和远程的特性分支。
-	最后，此时最好再git fetch origin一次，更新本地远程分支，让HEAD -> main,origin/main都在最新的commit的位置。
-	假如直接在main上开发，如果自己同时在两台电脑上在开发(比如双系统)，在某一时刻电脑A,B和远程的main分支相同，然后在电脑A上进行了一次提交并同步到远程仓库，然后这时在电脑B上进行一次commit，这时如果要提交会出现冲突(也就是提交时远程已经进行了更新的问题)。要解决的话就得先把远程分支拿回来rebase再push，所以就应该用main分支来和远程保持同步，开发在其它分支上进行，往远程main更新时先获取最新远程main分支rebase之后再push。
-	这里还有一种情况，如果自己在一台电脑上写了一部分，然后要切换到另一台电脑。这时需要提到github才能在另一台电脑上拉下来继续。这时候最好是开一个分支，在第一台电脑上提交到这个分支，然后在第二台电脑上拉下来继续开发提交，最后完成之后用git rebase -i或者git reset --mixed再commit，把commit合并。然后在这个分支上rebase main后把这个分支合并到main分支，再git push origin main并删除开发分支。这样做的好处是不用git push -f，只需要在开的那个分支上持续提交，最后把各个阶段的commit合并成一个总的后merge到main分支，再删除开发分支就行。如果直接在main分支上提交，最后压缩commit后github上的main的commit记录会多出来，必须git push -f才能推上去，这样比较危险，万一没注意，自己本地的main上的中间的commit实际少很多，push -f后就全完了，总之不要force push。
-```
 ---
 
-```
-	对于有上游的仓，要开发时先切换到这次要开发的特性的分支(以下以workbr为名)，然后在分支上开发。在新的分支上开发完成并commit之后，要先
-		git fetch upstream (更新本地的远程分支)
-    	git checkout main
-    	git merge upstream/main  (这里写成git merge upstream main不行，会提示"merge: upstream - not something we can merge"，会把upstream当成一个分支)
-	获取最新的远程上游分支(或者直接git pull upstream main)，如果正常操作，这次合并不会有冲突，而是fast-forward的合并(因为本地main分支是远程main分支的子集)。然后
-		git checkout workbr
-		git rebase main
-		git push orgin workbr
-    这样就先将main与最新的上游同步一次，然后以main为基准将自己在分支上的更改rebase,将特性分支push到远程仓之后(例如github),去github上提pr(这里要么让上游开一个特性分支，然后从origin/workbr向上游开的upstream/特性分支上提pr，上游合并到他开的特性分支后可以拉下来进行测试，测试好了然后上游再合到他的main分支;要么直接往upstream/main上提pr,上游把pr拉下来测试),等pr被合并之后，
-先更新本地的upstream和main：
-		git fetch upstream
-		git checkout main
-		git merge upstream/main
-		(或者直接git pull upstream main)
-再删除无用的特性分支：
-		git branch -d workbr
-		git push origin --delete workbr 或 git push origin -d workbr
-	这里有一个问题是，上游如果用rebase and merge(其它两种合并不知道)，那么合并到上游的commit的commit id会变化，当git branch -d workbr时，自己提交的那个commit在其它分支上没有(即使main分支已经从上游更新了自己提的那个commit，但是commit id不一样)，删除了后会导致丢失commit，所以git会让这个操作失败，并提示'The branch workbr is not fully merged'，需要用git branch -D workbr。
-然后再将自己的远程仓库和本地的origin刷新为最新的：
-		git push origin main (从本地的main上推)
-		git fetch origin
-		或者可以在github上点Fetch upstream，然后git fetch origin
-	最后的结果应该是：HEAD -> main,upstream/main,origin/main都在最新的commit的位置，无用的分支删除了(本地及自己的远程仓库的)，自己的远程仓库main分支刷新了。
-	如果直接在main上开发，那么开发完之后很可能出现上游main已经更新，推到github上之后,自己的分支不是上游分支的父集，不适合提pr(github上会提示有几个commit behind upstream，几个commit ahead of upstream)。所以就应该用main分支来和上游保持同步，开发在其它分支上进行，提pr在特性分支上进行，往远程特性分支更新时先获取最新上游main分支rebase之后再push。
-```
+​	对于个人的仓，要开发时先切换到这次要开发的特性的分支(以下以workbr为名)，然后在分支上开发。在新的分支上开发完成并commit之后，要先
 
-​	
+​		git fetch origin (更新本地的远程分支)
+
+​		git checkout main
+
+​		git merge origin/main (这里写成git merge origin main不行，会提示"merge: origin - not something we can merge"，会把origin当成一个分支)
+
+更新最新的远程分支到本地main分支(或者直接git pull origin main)，如果正常操作，这次合并不会有冲突，而是fast-forward的合并(因为本地main分支是远程main分支的子集)。然后
+
+​	git checkout workbr
+
+​	git rebase main
+
+​	git checkout main
+
+​	git merge workbr  (fast-forward的合并)
+
+​	git push orgin main
+
+这样就将开发完成的代码合并到本地main分支并同步到远程仓。合并之后特性分支就没用了，然后
+
+​	git branch -d workbr
+
+​	git push origin --delete workbr 或 git push origin -d workbr
+
+分别删除本地和远程的特性分支。
+
+最后，此时最好再git fetch origin一次，更新本地远程分支，让HEAD -> main,origin/main都在最新的commit的位置。
+
+假如直接在main上开发，如果自己同时在两台电脑上在开发(比如双系统)，在某一时刻电脑A,B和远程的main分支相同，然后在电脑A上进行了一次提交并同步到远程仓库，然后这时在电脑B上进行一次commit，这时如果要提交会出现冲突(也就是提交时远程已经进行了更新的问题)。要解决的话就得先把远程分支拿回来rebase再push，所以就应该用main分支来和远程保持同步，开发在其它分支上进行，往远程main更新时先获取最新远程main分支rebase之后再push。
+
+这里还有一种情况，如果自己在一台电脑上写了一部分，然后要切换到另一台电脑。这时需要提到github才能在另一台电脑上拉下来继续。这时候最好是开一个分支，在第一台电脑上提交到这个分支，然后在第二台电脑上拉下来继续开发提交，最后完成之后用git rebase -i或者git reset --mixed再commit，把commit合并。然后在这个分支上rebase main后把这个分支合并到main分支，再git push origin main并删除开发分支。这样做的好处是不用git push -f，只需要在开的那个分支上持续提交，最后把各个阶段的commit合并成一个总的后merge到main分支，再删除开发分支就行。如果直接在main分支上提交，最后压缩commit后github上的main的commit记录会多出来，必须git push -f才能推上去，这样比较危险，万一没注意，自己本地的main上的中间的commit实际少很多，push -f后就全完了，总之不要force push。
+
+---
+
+对于有上游的仓，要开发时先切换到这次要开发的特性的分支(以下以workbr为名)，然后在分支上开发。在新的分支上开发完成并commit之后，要先
+
+​	git fetch upstream (更新本地的远程分支)
+
+​	git checkout main
+
+​	git merge upstream/main  (这里写成git merge upstream main不行，会提示"merge: upstream - not something we can merge"，会把upstream当成一个分支)
+
+获取最新的远程上游分支(或者直接git pull upstream main)，如果正常操作，这次合并不会有冲突，而是fast-forward的合并(因为本地main分支是远程main分支的子集)。然后
+
+​	git checkout workbr
+
+​	git rebase main
+
+​	git push orgin workbr
+
+这样就先将main与最新的上游同步一次，然后以main为基准将自己在分支上的更改rebase,将特性分支push到远程仓之后(例如github),去github上提pr(这里要么让上游开一个特性分支，然后从origin/workbr向上游开的upstream/特性分支上提pr，上游合并到他开的特性分支后可以拉下来进行测试，测试好了然后上游再合到他的main分支;要么直接往upstream/main上提pr,上游把pr拉下来测试),等pr被合并之后，
+
+先更新本地的upstream和main：
+
+​	git fetch upstream
+
+​	git checkout main
+
+​	git merge upstream/main
+
+​	(或者直接git pull upstream main)
+
+再删除无用的特性分支：
+
+​	git branch -d workbr
+
+​	git push origin --delete workbr 或 git push origin -d workbr
+
+这里有一个问题是，上游如果用rebase and merge(其它两种合并不知道)，那么合并到上游的commit的commit id会变化，当git branch -d workbr时，自己提交的那个commit在其它分支上没有(即使main分支已经从上游更新了自己提的那个commit，但是commit id不一样)，删除了后会导致丢失commit，所以git会让这个操作失败，并提示'The branch workbr is not fully merged'，需要用git branch -D workbr。
+
+然后再将自己的远程仓库和本地的origin刷新为最新的：
+
+​	git push origin main (从本地的main上推)
+
+​	git fetch origin
+
+​	或者可以在github上点Fetch upstream，然后git fetch origin
+
+最后的结果应该是：HEAD -> main,upstream/main,origin/main都在最新的commit的位置，无用的分支删除了(本地及自己的远程仓库的)，自己的远程仓库main分支刷新了。
+
+如果直接在main上开发，那么开发完之后很可能出现上游main已经更新，推到github上之后,自己的分支不是上游分支的父集，不适合提pr(github上会提示有几个commit behind upstream，几个commit ahead of upstream)。所以就应该用main分支来和上游保持同步，开发在其它分支上进行，提pr在特性分支上进行，往远程特性分支更新时先获取最新上游main分支rebase之后再push。
+
+---
 
 ​	如果没注意直接往main分支上commit了，可以先checkout -b到workbr，然后在main分支上把commit reset掉。这样效果和commit提交到开发分支相同。然后main分支仍然用于同步。
 
@@ -78,7 +122,7 @@ https://www.runoob.com/git/git-commit-history.html
 
 最后main上面会多出来3个commit，这个树形结构可以用git log --graph看
 
-`Squash and merge`会将commit压缩成一个，最终只会多一个commit，且没有多余的分支信息（感觉像是github先git rebase了，然后通过git rebase -i压缩了commit，再合并），如图：
+`Squash and merge`会将commit压缩成一个，最终只会多一个commit，且没有多余的分支信息（感觉像是github先通过git rebase -i压缩了commit，再合并），如图：
 
 ![commit-squashing-diagram](https://docs.github.com/assets/cb-5742/images/help/pull_requests/commit-squashing-diagram.png)
 
@@ -88,7 +132,9 @@ https://www.runoob.com/git/git-commit-history.html
 
 ### github拉取pr
 
-参考： https://blog.csdn.net/April_Lie/article/details/106554769
+参考： 
+
+https://blog.csdn.net/April_Lie/article/details/106554769
 
 https://docs.github.com/cn/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally
 
@@ -324,5 +370,5 @@ b881b80 add Test.java
 
 **这里还会有一个小问题**，最终生成了finish version 1.0这个commit，但是git log查看commit日期是和modify Test.java这个commit相同的，时间并不会刷新为当前rebase的时间，有可能modify Test.java距离最终压缩成finish version 1.0已经过去很多天了。为了更新finish version 1.0的commit时间，运行`git commit --amend --date="2022-05-31T23:59:15+0800"`修改最新一个commit的时间为当前做完时候的日期(还没找到修改任一个指定commit的日期的指令，这个指令只能修改最新的那个commit的日期)。
 
-**补充说明：**有时候如果是向上游提交pr的话，这个finish version 1.0被上游合并之后上游那里合进去的是个github新生成的commit，日期是被刷新了的，所以不改日期也行，同步上游的就行了。但是如果是自己的仓内把这个commit往main分支上提pr合，不会生成新的commit，还是要修改日期。还有github的commit记录里显示的时间是commit被提交到github上的时候的时间，和git log看到的commit的时间不一样。
+**补充说明：** 有时候如果是向上游提交pr的话，这个finish version 1.0被上游合并之后上游那里合进去的是个github新生成的commit，日期是被刷新了的，所以不改日期也行，同步上游的就行了。但是如果是自己的仓内把这个commit往main分支上提pr合，不会生成新的commit，还是要修改日期。还有github的commit记录里显示的时间是commit被提交到github上的时候的时间，和git log看到的commit的时间不一样。
 
