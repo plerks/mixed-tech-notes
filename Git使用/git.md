@@ -46,6 +46,8 @@
 
 最后，此时最好再git fetch origin一次，更新本地远程分支，让HEAD -> main,origin/main都在最新的commit的位置。
 
+(也可以先push到远程开发分支，然后再在仓内向main分支提pr再合并，不过自己一个人的仓的话直接按上面做就可以了)
+
 假如直接在main上开发，如果自己同时在两台电脑上在开发(比如双系统)，在某一时刻电脑A,B和远程的main分支相同，然后在电脑A上进行了一次提交并同步到远程仓库，然后这时在电脑B上进行一次commit，这时如果要提交会出现冲突(也就是提交时远程已经进行了更新的问题)。要解决的话就得先把远程分支拿回来rebase再push，所以就应该用main分支来和远程保持同步，开发在其它分支上进行，往远程main更新时先获取最新远程main分支rebase之后再push。
 
 这里还有一种情况，如果自己在一台电脑上写了一部分，然后要切换到另一台电脑。这时需要提到github才能在另一台电脑上拉下来继续。这时候最好是开一个分支，在第一台电脑上提交到这个分支，然后在第二台电脑上拉下来继续开发提交，最后完成之后用git rebase -i或者git reset --mixed再commit，把commit合并。然后在这个分支上rebase main后把这个分支合并到main分支，再git push origin main并删除开发分支。这样做的好处是不用git push -f，只需要在开的那个分支上持续提交，最后把各个阶段的commit合并成一个总的后merge到main分支，再删除开发分支就行。如果直接在main分支上提交，最后压缩commit后github上的main的commit记录会多出来，必须git push -f才能推上去，这样比较危险，万一没注意，自己本地的main上的中间的commit实际少很多，push -f后就全完了，总之不要force push。
@@ -166,6 +168,14 @@ git reset能撤销之前的commit，分为--soft，--mixed(默认)，--hard三�
 
 * `git reset --mixed HEAD^3` --mixed是不写参数时的默认模式，把暂存区和本地仓库重置成reset目标节点的内容，看起来就像是把reset目标节点之后的更改应用到工作区。
 * `git reset --hard HEAD^3` 把工作区、暂存区、本地仓库都重置为reset目标节点的内容，**慎用**，会导致内容无法恢复。
+
+### git revert提交revert commit
+
+`git revert <commit>`会生成一个新的commit，反做指定的commit，达到撤销那个commit的效果。例如，`git revert commit-id`会生成一个新的commit，操作与指定的commit的完全相反，达到撤销指定commit的效果。git revert不会把中间的commit也反做，例如：`git revert HEAD~2`生成的revert commit只会反做HEAD~2那个commit的内容，不会把HEAD和HEAD~1的内容也反做了。
+
+git revert应该用在对远程仓库的撤销，例如远程仓库main分支上有一个不想要的commit要撤销。一种方式是在本地reset去除这个commit，然后push -f(github上没有直接删除某个commit的功能)，但是这样比较危险，如果没注意其实本地差了很多commit就完了，而且对其它使用者和下游也不友好。另一种方式就是使用`git revert <commit>`。
+
+如果还未推到远程仓库，这时在确认安全后，使用git reset撤销即可。但是如果已经推到了远程仓库，这时就只能使用git revert了(除非想使用危险的push -f)。
 
 ### git stash保存和恢复进度
 
