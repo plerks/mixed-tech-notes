@@ -136,7 +136,7 @@ https://www.runoob.com/git/git-commit-history.html
 
 此外，github上的pr合并之后，commit记录里能看到作者和进行合入的人。git log本身只有作者信息。
 
-### github拉取pr
+### 拉取github的pr
 
 参考： 
 
@@ -144,17 +144,18 @@ https://blog.csdn.net/April_Lie/article/details/106554769
 
 https://docs.github.com/cn/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally
 
-通过 Git 拉取 github 上的 Pull Request(PR) 到本地进行 review：
+通过git拉取github上的Pull Request到本地 (进行review或者build和测试等，github应该是会为pr建立分支，不过不直接在项目主页的分支列表里显示)，
 
-如果自己使用的就是PR提交的仓库，命令为：
+命令为：
 
-​	`git fetch origin pull/PRId/head:LocalBranchName`
-其中，PRId 为该 Pull Request 的序号，pull/PRId/head是github给这个pr建的分支，LocalBranchName为拉取到本地后的分支名称。
+​	`git fetch origin pull/PRId/head:LocalBranchName` (视具体情况，将origin替换为实际pr所属的仓库)
+
+其中，PRId 为该 Pull Request 的序号，pull/PRId/head整体是github给这个pr建的分支名，LocalBranchName为拉取到本地后的分支名称。例如：
 
 ​	`git fetch origin pull/1204/head:pr1204`
-类似，如果自己的仓库是Clone的PR提交的仓库，则命令为：
 
-​	`git fetch upstream pull/PRId/head:LocalBranchName`
+
+应该也可以`git fetch <remote> pull/PRId/head` ，然后再`git checkout -b LocalBranchName <remote>/pull/PRId/head`创建本地分支
 
 ### git clone时只拉取必要内容
 
