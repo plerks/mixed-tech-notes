@@ -106,6 +106,10 @@
 
 ​	如果没注意直接往main分支上commit了，可以先checkout -b到workbr，然后在main分支上把commit reset掉。这样效果和commit提交到开发分支相同。然后main分支仍然用于同步。
 
+### git cherry-pick挑选commit
+
+`git cherry-pick <commit>…`对commit进行挑选并生成新的commit到当前分支。可以用于将B分支的一个或几个commit也提交到A分支，例如如果不小心把内容写到了B分支里并commit了，就可以用cherry-pick将commit挑到A分支上，然后把B分支的那个commit reset掉。具体操作方式是先在B分支上找到commit id，然后checkout到A分支上`git cherry-pick commit-id-1 commit-id-2 ...`。这样做之后A分支上会生成对应的commit，但是commit id不一样(commit message一样)。
+
 ### github上的3种合并
 
 参考：
@@ -151,6 +155,62 @@ https://docs.github.com/cn/pull-requests/collaborating-with-pull-requests/review
 类似，如果自己的仓库是Clone的PR提交的仓库，则命令为：
 
 ​	`git fetch upstream pull/PRId/head:LocalBranchName`
+
+### git clone时只拉取必要内容
+
+git clone可以使用--depth参数(必须是正整数)指定拉取的commit数量，项目内容会拉下来，但通过--depth能减少拉取的commit数量，减少.git文件夹的大小。具体使用方式是：
+
+`git clone --depth=1 <仓库地址>`
+
+实测有指定--depth参数时默认指定了--single-branch参数，只会拉取remote的 HEAD指向的分支。可以通过-b | --branch参数指定要clone的分支，或者--no-single-branch参数拉取所有远程分支(实测所有远程分支都拉下来了，本地分支只有main，还需要自己`git checkout workbr`(参考git checkout --help的文档，当origin有同名远程分支时，`git checkout workbr`相当于`git checkout -b workbr --track origin/workbr`))。例如：
+
+`git clone --depth=1 -b <branchname> <仓库地址>`
+
+`git clone --depth=1 --no-single-branch <仓库地址> `
+
+git clone --help文档对--depth和--[no-]single-branch的说明如下：
+
+```
+--depth <depth>
+Create a shallow clone with a history truncated to the specified number of commits. Implies --single-branch unless --no-single-branch is given to fetch the histories near the tips of all branches. If you want to clone submodules shallowly, also pass --shallow-submodules.
+
+--[no-]single-branch
+Clone only the history leading to the tip of a single branch, either specified by the --branch option or the primary branch remote’s HEAD points at. Further fetches into the resulting repository will only update the remote-tracking branch for the branch this option was used for the initial cloning. If the HEAD at the remote did not point at any branch when --single-branch clone was made, no remote-tracking branch is created.
+```
+
+### git checkout有同名远程分支时
+
+`git checkout [<branch>]`，当有远程同名分支时，会自动以那个远程同名分支为start-point创建branch，并用--track参数设置远程分支为上游分支。
+
+git checkout --help文档对应部分如下：
+
+---
+
+*git checkout* [<branch>]
+
+To prepare for working on `<branch>`, switch to it by updating the index and the files in the working tree, and by pointing `HEAD` at the branch. Local modifications to the files in the working tree are kept, so that they can be committed to the `<branch>`.
+
+If `<branch>` is not found but there does exist a tracking branch in exactly one remote (call it `<remote>`) with a matching name and `--no-guess` is not specified, treat as equivalent to
+
+```
+$ git checkout -b <branch> --track <remote>/<branch>
+```
+
+You could omit `<branch>`, in which case the command degenerates to "check out the current branch", which is a glorified no-op with rather expensive side-effects to show only the tracking information, if exists, for the current branch.
+
+
+
+-t
+
+--track
+
+When creating a new branch, set up `branch.<name>.remote` and `branch.<name>.merge` configuration entries to mark the start-point branch as "upstream" from the new branch. This configuration will tell git to show the relationship between the two branches in `git status` and `git branch -v`. Furthermore, it directs `git pull` without arguments to pull from the upstream when the new branch is checked out.
+
+This behavior is the default when the start point is a remote-tracking branch. Set the branch.autoSetupMerge configuration variable to `false` if you want `git switch`, `git checkout` and `git branch` to always behave as if `--no-track` were given. Set it to `always` if you want this behavior when the start-point is either a local or remote-tracking branch.
+
+---
+
+
 
 ### git reset进行恢复
 
