@@ -10,7 +10,7 @@
 
 要让Navicat能用账户密码连接数据库，有两种方法：
 
-* 第一个是将身份验证方法从更改`auth_socket`为`mysql_native_password`。您可以通过运行以下命令来做到这一点：
+* 第一个是将身份验证方法从更改`auth_socket`为`mysql_native_password`。
 
 ``` 
 mysql > ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'very_strong_password';
@@ -31,4 +31,27 @@ mysql > GRANT ALL PRIVILEGES ON *.* TO 'gxy'@'%'IDENTIFIED BY '远程访问密�
 ```
 
 其中 ‘root’@’%’ 中的root表示远程访问数据库的账户，%表示所有IP均可访问，'远程访问密码'表示远程访问mysql时需要的密码，此时就完成了mysql开启远程访问的操作。
+### 导入导出数据
+导出数据
+1. 导出整个数据库
+    * `mysqldump -u 用户名 -h 主机名 -p 数据库名 > 导出的.sql文件路径`
+2. 导出一个表
+    * `mysqldump -u 用户名 -h 主机名 -p 数据库名 表名 > 导出的.sql文件路径`
+3. 导出整个数据库结构(不包含数据)
+    * `mysqldump -u 用户名 -h 主机名 -p -d 数据库名 > 导出的.sql文件路径`
+4. 导出一个表结构(不包含数据)
+    * `mysqldump -u 用户名 -h 主机名 -p -d 数据库名 表名 > 导出的.sql文件路径`
 
+导入数据
+
+方法一:
+1. 先进入数据库
+    * `mysql -u 用户名 -h 主机名 -P mysql-server端口 -p`
+2. 选中对应的数据库
+    * mysql > `use database-name;`
+3. 导入数据(source命令)
+    * mysql > `source .sql文件路径;`
+
+方法二:
+
+`mysql -u 用户名 -p 数据库名 < .sql文件路径`
