@@ -12,7 +12,7 @@
 
 ​		git remote -v
 
-​	设置好远程仓库地址。
+​	设置好远程仓库地址(git remote set-url修改(需要先add)，git remote remove移除)。
 
 ---
 
@@ -442,4 +442,14 @@ b881b80 add Test.java
 **这里还会有一个小问题**，最终生成了finish version 1.0这个commit，但是git log查看commit日期是和modify Test.java这个commit相同的，时间并不会刷新为当前rebase的时间，有可能modify Test.java距离最终压缩成finish version 1.0已经过去很多天了。为了更新finish version 1.0的commit时间，运行`git commit --amend --date="2022-05-31T23:59:15+0800"`修改最新一个commit的时间为当前做完时候的日期(还没找到修改任一个指定commit的日期的指令，这个指令只能修改最新的那个commit的日期)。
 
 **补充说明：** 有时候如果是向上游提交pr的话，这个finish version 1.0被上游合并之后上游那里合进去的是个github新生成的commit，日期是被刷新了的，所以不改日期也行，同步上游的就行了。但是如果是自己的仓内把这个commit往main分支上提pr合，不会生成新的commit，还是要修改日期。还有github的commit记录里显示的时间是commit被提交到github上的时候的时间，和git log看到的commit的时间不一样。
+
+### ubuntu下设置git默认编辑器为VSCode
+
+ubuntu下git默认的编辑器为GNU nano(例如`git commit`时的默认编辑器)，不太方便，windows下似乎是安装时会提示进行选择。要设置git默认编辑器为VSCode，运行`git config --global core.editor "code --wait"`，或者直接编辑~/.gitconfig，同样修改code.editor，例如：
+
+```
+[core]
+	quotepath = false
+	editor = code --wait
+```
 
