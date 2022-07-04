@@ -22,7 +22,29 @@ ubuntu默认dock关掉之后，由于没有了默认dock里的显示所有应用
 
 `sudo ln -s /usr/share/applications/plank.desktop /etc/xdg/autostart/`
 
+### plank主题配置
 
+plank主题配置文件位置在`/usr/share/plank/themes/`或者`~/.local/share/plank/themes`，`/usr/share/plank/themes/Default/`下的dock.theme里有配置字段和解释，自己在Default同级目录下新建一个文件夹(命名为自己的主题名)，然后在里面新建dock.theme文件，在里面重写自己想配置的字段即可，例如:
+
+```
+
+[PlankTheme]
+TopRoundness=0
+BottomRoundness=0
+LineWidth=0
+OuterStrokeColor=41;;41;;41;;0
+FillStartColor=41;;41;;41;;0
+InnerStrokeColor=255;;255;;255;;0
+FillEndColor=80;;80;;80;;0
+
+[PlankDockTheme]
+TopPadding=2
+BottomPadding=2
+ActiveTime=10
+FadeTime=10
+```
+
+然后在plank的外观里选择自己添加的主题即可。
 
 ### 参考链接
 
@@ -37,3 +59,4 @@ ubuntu默认dock关掉之后，由于没有了默认dock里的显示所有应用
 * https://www.cnblogs.com/sun-sun/p/6707338.html
 * https://www.linuxcapable.com/zh-CN/%E5%A6%82%E4%BD%95%E5%9C%A8ubuntu-20-04%E4%B8%8A%E5%AE%89%E8%A3%85kde%E7%AD%89%E7%A6%BB%E5%AD%90%E6%A1%8C%E9%9D%A2%E7%8E%AF%E5%A2%83/
 * https://linux.cn/article-14340-1.html
+* https://www.jianshu.com/p/510ba8591673
