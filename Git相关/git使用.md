@@ -110,6 +110,8 @@
 
 `git cherry-pick <commit>…`对commit进行挑选并生成新的commit到当前分支。可以用于将B分支的一个或几个commit也提交到A分支，例如如果不小心把内容写到了B分支里并commit了，就可以用cherry-pick将commit挑到A分支上，然后把B分支的那个commit reset掉。具体操作方式是先在B分支上找到commit id，然后checkout到A分支上`git cherry-pick commit-id-1 commit-id-2 ...`。这样做之后A分支上会生成对应的commit，但是commit id不一样(commit message一样)。
 
+cherry-pick也可以指定区间来挑选commit，`git cherry-pick <commitId1> .. <commitId2>`可以用来挑选`(commitId1, commitId2]`区间的commit，如果想挑闭区间，这样写：`git cherry-pick <commitId1>~ .. <commitId2>`(这样如果commitId1是第一次commit，会因为commitId1~报错，不过可以用一次单独的cherry-pick解决)。
+
 ### github上的3种合并
 
 参考：
@@ -260,7 +262,7 @@ error: cannot rebase: You have unstaged changes.
 error: Please commit or stash them.
 ```
 
-`git add -A`之后再尝试`git rebase main`仍然不行
+`git add -A`(或者`git add .`)之后再尝试`git rebase main`仍然不行
 
 ```
 $ git rebase main
@@ -442,6 +444,8 @@ b881b80 add Test.java
 **这里还会有一个小问题**，最终生成了finish version 1.0这个commit，但是git log查看commit日期是和modify Test.java这个commit相同的，时间并不会刷新为当前rebase的时间，有可能modify Test.java距离最终压缩成finish version 1.0已经过去很多天了。为了更新finish version 1.0的commit时间，运行`git commit --amend --date="2022-05-31T23:59:15+0800"`修改最新一个commit的时间为当前做完时候的日期(还没找到修改任一个指定commit的日期的指令，这个指令只能修改最新的那个commit的日期)。
 
 **补充说明：** 有时候如果是向上游提交pr的话，这个finish version 1.0被上游合并之后上游那里合进去的是个github新生成的commit，日期是被刷新了的，所以不改日期也行，同步上游的就行了。但是如果是自己的仓内把这个commit往main分支上提pr合，不会生成新的commit，还是要修改日期。还有github的commit记录里显示的时间是commit被提交到github上的时候的时间，和git log看到的commit的时间不一样。
+
+`git rebase`除了以一个别的分支为基准，也可以以当前分支为基准rebase(可以更方便地squash)，例如，在workbr上`git rebase -i HEAD~3`会列出workbr最新的3个commit以供操作(这里不写-i运行后不会有任何变化，因为默认是pick，不写-i含义是pick workbr上的最新3个commit)。`git rebase -i --root`直接从最开始的commit开始rebase。
 
 ### ubuntu下设置git默认编辑器为VSCode
 
