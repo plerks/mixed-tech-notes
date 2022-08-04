@@ -96,7 +96,7 @@
 
 ​	git fetch origin
 
-​	或者可以在github上点Fetch upstream，然后git fetch origin
+​	或者可以在github网页上点Sync fork，选择Update branch，然后本机再git fetch origin
 
 最后的结果应该是：HEAD -> main,upstream/main,origin/main都在最新的commit的位置，无用的分支删除了(本地及自己的远程仓库的)，自己的远程仓库main分支刷新了。
 
@@ -213,7 +213,22 @@ This behavior is the default when the start point is a remote-tracking branch. S
 
 ---
 
+### git show查看commit改动
 
+查看某个commit相对于上个commit的改动，除了用`git diff <commit>~ <commit>`，也可以用`git show <commit>`。例如查看最新一个commit的改动，就可以用`git show HEAD`。不过git show只能diff相邻的commit，不能diff隔开的commit。此外，git show有个--format参数，可以用来查看commit的committer信息，例如：`git show HEAD --format=fuller`。(committer和author有区别，如果完全是自己的仓，author和committer都会是自己，但是如果是在github上提pr，author会是自己，committer信息会是那个pr的合入者)
+
+`git show <commit> --format=fuller`的输出格式为：
+
+```
+commit <hash>
+Author:     <author>
+AuthorDate: <author-date>
+Commit:     <committer>
+CommitDate: <committer-date>
+<title-line>    (commit message标题)
+<full-commit-message>    (commit message内容)
+<textual-diff>
+```
 
 ### git reset进行恢复
 
