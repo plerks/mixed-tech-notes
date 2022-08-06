@@ -215,7 +215,7 @@ This behavior is the default when the start point is a remote-tracking branch. S
 
 ### git show查看commit改动
 
-查看某个commit相对于上个commit的改动，除了用`git diff <commit>~ <commit>`，也可以用`git show <commit>`。例如查看最新一个commit的改动，就可以用`git show HEAD`。不过git show只能diff相邻的commit，不能diff隔开的commit。此外，git show有个--format参数，可以用来查看commit的committer信息，例如：`git show HEAD --format=fuller`。(committer和author有区别，如果完全是自己的仓，author和committer都会是自己，但是如果是在github上提pr，author会是自己，committer信息会是那个pr的合入者)
+查看某个commit相对于上个commit的改动，除了用`git diff <commit>~ <commit>`，也可以用`git show <commit>`。例如查看最新一个commit的改动，就可以用`git show HEAD`(或者直接`git show`，默认show HEAD)。不过git show只能diff相邻的commit，不能diff隔开的commit。此外，git show有个--format参数，可以用来查看commit的committer信息，例如：`git show HEAD --format=fuller`。(committer和author有区别，如果完全是自己的仓，author和committer都会是自己，但是如果是在github上提pr，author会是自己，committer信息会是那个pr的合入者)
 
 `git show <commit> --format=fuller`的输出格式为：
 
@@ -230,6 +230,23 @@ CommitDate: <committer-date>
 <textual-diff>
 ```
 
+也可以`git show <commit> <pathspec>...`查看某次提交中的文件变化
+
+git log查看历史
+
+`git log`查看commit历史
+
+`git log <path>…`查看文件历史
+
+`git log -p <path>…`查看文件历史并显示diff
+
+### git rm删除文件
+
+`git rm`将文件从暂存区，或者暂存区和工作区中删除。
+
+* 将文件从工作区和暂存区中删除：`git rm <pathspec>…`，若工作区和暂存区有修改，需要`git rm -f <pathspec>…`
+* 将文件从暂存区中删除：`git rm --cached <pathspec>…`
+
 ### git reset进行恢复
 
 参考链接：
@@ -240,12 +257,67 @@ https://www.jianshu.com/p/cbd5cd504f14
 
 https://www.runoob.com/git/git-reset.html
 
-git reset能撤销之前的commit，分为--soft，--mixed(默认)，--hard三种模式
+1. git reset能撤销之前的commit，用于撤销commit时主要分为--soft，--mixed(默认)，--hard三种模式
 
-* `git reset --soft HEAD^3` 只把本地仓库重置成reset目标节点的内容，看起来就像是把reset目标节点之后的更改应用到暂存区。
+	* `git reset --soft HEAD^3` 只把本地仓库重置成reset目标节点的内容，看起来就像是把reset目标节点之后的更改应用到暂存区。
+	* `git reset --mixed HEAD^3` --mixed是不写参数时的默认模式，把暂存区和本地仓库重置成reset目标节点的内容，看起来就像是把reset目标节点之后的更改应用到工作区。
+	* `git reset --hard HEAD^3` 把工作区、暂存区、本地仓库都重置为reset目标节点的内容，**慎用**，会导致内容无法恢复。
 
-* `git reset --mixed HEAD^3` --mixed是不写参数时的默认模式，把暂存区和本地仓库重置成reset目标节点的内容，看起来就像是把reset目标节点之后的更改应用到工作区。
-* `git reset --hard HEAD^3` 把工作区、暂存区、本地仓库都重置为reset目标节点的内容，**慎用**，会导致内容无法恢复。
+2. git reset也可以用来reset某个文件，参考git文档，
+
+```
+git reset [-q] [<tree-ish>] [--] <pathspec>…
+git reset [-q] [--pathspec-from-file=<file> [--pathspec-file-nul]] [<tree-ish>]
+These forms reset the index entries for all paths that match the <pathspec> to their state at <tree-ish>. (It does not affect the working tree or the current branch.)
+
+This means that git reset <pathspec> is the opposite of git add <pathspec>. This command is equivalent to git restore [--source=<tree-ish>] --staged <pathspec>...
+```
+
+使用方法例如`git reset HEAD~2 1.txt`，运行之后只reset了暂存区的1.txt，对工作区和本地仓库没影响(reset文件时没有--soft，--mixed，--hard三种模式)。
+
+### git restore恢复文件
+
+常用格式为: git restore [<options>] [--source=<tree>] [--staged] [--worktree] [--] <pathspec>…
+
+git文档的一段描述为：
+
+Restore specified paths in the working tree with some contents from a restore source. If a path is tracked but does not exist in the restore source, it will be removed to match the source.
+
+The command can also be used to restore the content in the index with `--staged`, or restore both the working tree and the index with `--staged --worktree`.
+
+By default, if `--staged` is given, the contents are restored from `HEAD`, otherwise from the index. Use `--source` to restore from a different commit.If `--source` not specified, the contents are restored from `HEAD` if `--staged` is given, otherwise from the index.
+
+总的来说，用`--source`指定要reset到的目标commit，用`<pathspec>...`指定要reset的目标文件。有`--staged`参数时，会将暂存区的目标文件reset到`--source`指定的commit的状态。有`--staged`和`--worktree`参数时，会将工作区和暂存区的目标文件都reset到`--source`指定的commit的状态。
+
+若`--source`和`--staged`都没有，才会按照暂存区恢复，否则都是按照本地仓库恢复(只写`--staged`，默认`--source`为HEAD)。
+
+撤销某个(或某些)文件为某个commit的状态：
+
+* 只影响工作区：`git restore --source=HEAD^3 <pathspec>...`
+
+* 只影响暂存区：`git restore --source=HEAD^3 --staged  <pathspec>...`
+
+* 影响工作区和暂存区：`git restore --source=HEAD^3 --staged --worktree  <pathspec>...`
+
+撤销某个(或某些)文件为暂存区的状态：
+
+* `git restore <pathspec>...`
+
+### git checkout恢复文件
+
+git checkout除了切换分支，也可以`git checkout -- <pathspec>...`恢复文件，格式为：
+
+*git checkout* **[-f|--ours|--theirs|-m|--conflict=<style>] [<tree-ish>] [--] <pathspec>…**
+
+若<tree-ish>不指定，按照暂存区恢复工作区文件。若 <tree-ish>指定了，按照本地仓库恢复工作区和暂存区文件。
+
+`git checkout -- <pathspec>...`
+
+（相当于`git restore <pathspec>...`）
+
+`git checkout HEAD^3 -- <pathspec>...`
+
+（相当于`git restore --source=HEAD^3 --staged --worktree  <pathspec>...`）
 
 ### git revert提交revert commit
 
