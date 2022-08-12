@@ -18,17 +18,17 @@
 
 ​	对于个人的仓，要开发时先切换到这次要开发的特性的分支(以下以workbr为名)，然后在分支上开发。在新的分支上开发完成并commit之后，要先
 
-​		git fetch origin (更新本地的远程分支)
+​	git fetch origin (更新本地的远程分支，可以只fetch特定的：git fetch origin main)
 
-​		git checkout main
+​	git checkout main
 
-​		git merge origin/main (这里写成git merge origin main不行，会提示"merge: origin - not something we can merge"，会把origin当成一个分支)
+​	git merge origin/main (这里写成git merge origin main不行，会提示"merge: origin - not something we can merge"，会把origin当成一个分支)
 
 更新最新的远程分支到本地main分支(或者直接git pull origin main)，如果正常操作，这次合并不会有冲突，而是fast-forward的合并(因为本地main分支是远程main分支的子集)。然后
 
 ​	git checkout workbr
 
-​	git rebase main
+​	git rebase main (有需要的话，rebase -i，然后r，s，s...压缩commit)
 
 ​	git checkout main
 
@@ -50,13 +50,13 @@
 
 假如直接在main上开发，如果自己同时在两台电脑上在开发(比如双系统)，在某一时刻电脑A,B和远程的main分支相同，然后在电脑A上进行了一次提交并同步到远程仓库，然后这时在电脑B上进行一次commit，这时如果要提交会出现冲突(也就是提交时远程已经进行了更新的问题)。要解决的话就得先把远程分支拿回来rebase再push，所以就应该用main分支来和远程保持同步，开发在其它分支上进行，往远程main更新时先获取最新远程main分支rebase之后再push。
 
-这里还有一种情况，如果自己在一台电脑上写了一部分，然后要切换到另一台电脑。这时需要提到github才能在另一台电脑上拉下来继续。这时候最好是开一个分支，在第一台电脑上提交到这个分支，然后在第二台电脑上拉下来继续开发提交，最后完成之后用git rebase -i或者git reset --mixed再commit，把commit合并。然后在这个分支上rebase main后把这个分支合并到main分支，再git push origin main并删除开发分支。这样做的好处是不用git push -f，只需要在开的那个分支上持续提交，最后把各个阶段的commit合并成一个总的后merge到main分支，再删除开发分支就行。如果直接在main分支上提交，最后压缩commit后github上的main的commit记录会多出来，必须git push -f才能推上去，这样比较危险，万一没注意，自己本地的main上的中间的commit实际少很多，push -f后就全完了，总之不要force push。
+这里还有一种情况，如果自己在一台电脑上写了一部分，然后要切换到另一台电脑。这时需要提到github才能在另一台电脑上拉下来继续。这时候最好是开一个分支，在第一台电脑上提交到这个分支，然后在第二台电脑上拉下来继续开发提交，最后完成之后用git rebase -i HEAD~n(或者main也行)压缩commit。然后在这个分支上rebase main后把这个分支合并到main分支，再git push origin main并删除开发分支。这样做的好处是不用git push -f，只需要在开的那个分支上持续提交，最后把各个阶段的commit合并成一个总的后merge到main分支，再删除开发分支就行。如果直接在main分支上提交，最后压缩commit后github上的main的commit记录会多出来，必须git push -f才能推上去，这样比较危险，万一没注意，自己本地的main上的中间的commit实际少很多，push -f后就全完了，总之不要force push。
 
 ---
 
 对于有上游的仓，要开发时先切换到这次要开发的特性的分支(以下以workbr为名)，然后在分支上开发。在新的分支上开发完成并commit之后，要先
 
-​	git fetch upstream (更新本地的远程分支)
+​	git fetch upstream (更新本地的远程分支，可以只fetch特定的：git fetch upstream main)
 
 ​	git checkout main
 
@@ -66,7 +66,7 @@
 
 ​	git checkout workbr
 
-​	git rebase main
+​	git rebase main (有需要的话，rebase -i，然后r，s，s...压缩commit)
 
 ​	git push orgin workbr
 
@@ -106,6 +106,16 @@
 
 ​	如果没注意直接往main分支上commit了，可以先checkout -b到workbr，然后在main分支上把commit reset掉。这样效果和commit提交到开发分支相同。然后main分支仍然用于同步。
 
+### git fetch获取远程分支
+
+git fetch origin会把所有远程分支拉下来(已有的话会更新)，git branch -a | -r能看到，没写remote默认为origin。
+
+只fetch特定的远程分支：`git fetch origin branchname`
+
+### git add -A和git add .微小区别
+
+在.git所在目录下运行时是没区别的，但是实际可以在.git的子目录下运行git命令(父目录不行，运行git命令时应该是会自动往上寻找.git)，这时候git add就只会add当前目录下的所有改动，git add -A仍然是add项目的所有改动。
+
 ### git cherry-pick挑选commit
 
 `git cherry-pick <commit>…`对commit进行挑选并生成新的commit到当前分支。可以用于将B分支的一个或几个commit也提交到A分支，例如如果不小心把内容写到了B分支里并commit了，就可以用cherry-pick将commit挑到A分支上，然后把B分支的那个commit reset掉。具体操作方式是先在B分支上找到commit id，然后checkout到A分支上`git cherry-pick commit-id-1 commit-id-2 ...`。这样做之后A分支上会生成对应的commit，但是commit id不一样(commit message一样)。
@@ -136,7 +146,7 @@ https://www.runoob.com/git/git-commit-history.html
 
 `Rebase and merge`会将特性分支上相对于基底的新的commit摘出来，接到基底分支后面。但参考链接https://docs.github.com/cn/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github说github的rebase和git rebase略有区别，还没研究。rebase and merge合并之后，下游提来的commit的commit id会变化。
 
-此外，github上的pr合并之后，commit记录里能看到作者和进行合入的人。git log本身只有作者信息。
+此外，github上的pr合并之后，commit记录里能看到作者和进行合入的人。git log本身只有作者信息(看author和committer信息要用git show的--format=fuller参数)。
 
 ### 拉取github的pr
 
@@ -156,8 +166,15 @@ https://docs.github.com/cn/pull-requests/collaborating-with-pull-requests/review
 
 ​	`git fetch origin pull/1204/head:pr1204`
 
+应该也可以`git fetch <remote> pull/PRId/head`，
 
-应该也可以`git fetch <remote> pull/PRId/head` ，然后再`git checkout -b LocalBranchName <remote>/pull/PRId/head`创建本地分支
+然后再`git checkout -b LocalBranchName <remote>/pull/PRId/head`创建本地分支
+
+### git clone和git init + git pull微小区别
+
+git clone会拉所有远程分支，只创建main分支。可以使用-b指定创建其它分支，不过远程分支也是都拉了。并且git clone会自动设置origin。
+
+git init再git pull只会拉特定的分支，不会把远程分支都拉下来。也不会设置origin。
 
 ### git clone时只拉取必要内容
 
@@ -165,7 +182,7 @@ git clone可以使用--depth参数(必须是正整数)指定拉取的commit数�
 
 `git clone --depth=1 <仓库地址>`
 
-实测有指定--depth参数时默认指定了--single-branch参数，只会拉取remote的 HEAD指向的分支。可以通过-b | --branch参数指定要clone的分支，或者--no-single-branch参数拉取所有远程分支(实测所有远程分支都拉下来了，本地分支只有main，还需要自己`git checkout workbr`(参考git checkout --help的文档，当origin有同名远程分支时，`git checkout workbr`相当于`git checkout -b workbr --track origin/workbr`))。例如：
+实测有指定--depth参数时默认指定了--single-branch参数，只会拉取remote的 HEAD指向的分支。可以通过-b | --branch参数指定要clone的分支，或者--no-single-branch参数拉取所有远程分支(实测所有远程分支都拉下来了，不过本地分支只有main，还需要自己`git checkout workbr`(参考git checkout --help的文档，当origin有同名远程分支时，`git checkout workbr`相当于`git checkout -b workbr --track origin/workbr`))。例如：
 
 `git clone --depth=1 -b <branchname> <仓库地址>`
 
@@ -183,7 +200,7 @@ Clone only the history leading to the tip of a single branch, either specified b
 
 ### git checkout有同名远程分支时
 
-`git checkout [<branch>]`，当有远程同名分支时，会自动以那个远程同名分支为start-point创建branch，并用--track参数设置远程分支为上游分支。
+`git checkout [<branch>]`，当有同名远程分支时，会自动以那个同名远程分支为start-point创建branch，并用--track参数设置远程分支为上游分支。不过有-b参数时：`git checkout -b <branch>`，不会尝试以同名远程分支为start-point，就是会从当前分支checkout。
 
 git checkout --help文档对应部分如下：
 
