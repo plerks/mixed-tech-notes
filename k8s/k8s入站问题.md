@@ -210,7 +210,7 @@ PS:
 
 ---
 
-NodePort类型的Service会在所有节点上设置路由规则，<https://kubernetes.io/zh/docs/concepts/services-networking/service/>原话：
+NodePort类型的Service会在所有节点上设置路由规则(感觉ClusterIP和LoadBalancer类型的service估计也应该是每个节点上都会设置路由规则)，<https://kubernetes.io/zh/docs/concepts/services-networking/service/>原话：
 
 如果你将 `type` 字段设置为 `NodePort`，则 Kubernetes 控制平面将在 `--service-node-port-range` 标志指定的范围内分配端口（默认值：30000-32767）。   **每个节点将那个端口（每个节点上的相同端口号）代理到你的服务中。**
 
