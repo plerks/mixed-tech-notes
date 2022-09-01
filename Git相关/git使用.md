@@ -122,6 +122,8 @@ git fetch origin会把所有远程分支拉下来(已有的话会更新)，git b
 
 cherry-pick也可以指定区间来挑选commit，`git cherry-pick <commitId1> .. <commitId2>`可以用来挑选`(commitId1, commitId2]`区间的commit，如果想挑闭区间，这样写：`git cherry-pick <commitId1>~ .. <commitId2>`(这样如果commitId1是第一次commit，会因为commitId1~报错，不过可以用一次单独的cherry-pick解决)。
 
+补充：[cherry-pick和rebase为什么会出现冲突](#cherry-pick和rebase为什么会出现冲突)
+
 ### github上的3种合并
 
 参考：
@@ -131,9 +133,6 @@ https://docs.github.com/cn/repositories/configuring-branches-and-merges-in-your-
 https://www.chenshaowen.com/blog/the-difference-of-tree-ways-of-merging-code-in-github.html
 https://www.runoob.com/git/git-commit-history.html
 ```
-
-
-
 `Create a merge commit`会合并commit并生成一个新的merge commit，如图：
 
 ![standard-merge-commit-diagram](https://docs.github.com/assets/cb-5407/images/help/pull_requests/standard-merge-commit-diagram.png)
@@ -324,7 +323,7 @@ By default, if `--staged` is given, the contents are restored from `HEAD`, other
 
 git checkout除了切换分支，也可以`git checkout -- <pathspec>...`恢复文件，格式为：
 
-*git checkout* **[-f|--ours|--theirs|-m|--conflict=<style>] [<tree-ish>] [--] <pathspec>…**
+`*git checkout* **[-f|--ours|--theirs|-m|--conflict=<style>] [<tree-ish>] [--] <pathspec>…**`
 
 若<tree-ish>不指定，按照暂存区恢复工作区文件。若<tree-ish>指定了，按照本地仓库恢复工作区和暂存区文件。
 
@@ -550,6 +549,122 @@ b881b80 add Test.java
 **补充说明：** 有时候如果是向上游提交pr的话，这个finish version 1.0被上游合并之后上游那里合进去的是个github新生成的commit，日期是被刷新了的，所以不改日期也行，同步上游的就行了。但是如果是自己的仓内把这个commit往main分支上提pr合，不会生成新的commit，还是要修改日期。还有github的commit记录里显示的时间是commit被提交到github上的时候的时间，和git log看到的commit的时间不一样。
 
 `git rebase`除了以一个别的分支为基准，也可以以当前分支为基准rebase(可以更方便地squash)，例如，在workbr上`git rebase -i HEAD~3`会列出workbr最新的3个commit以供操作(这里不写-i运行后不会有任何变化，因为默认是pick，不写-i含义是pick workbr上的最新3个commit)。`git rebase -i --root`直接从最开始的commit开始rebase。
+
+补充：[cherry-pick和rebase为什么会出现冲突](#cherry-pick和rebase为什么会出现冲突)
+
+### cherry-pick和rebase为什么会出现冲突
+参考[Git底层数据结构和原理](https://www.jiqizhixin.com/articles/2020-05-20-3)：git对文件版本的管理理念是以每次提交为一次快照，提交时对所有文件做一次全量快照。
+
+之前以为cherry-pick和rebase生成的新的commit的逻辑是直接以目标commit的状态为准，也就是说直接以目标commit的快照为新的commit的最终状态，这样按理说不会发生冲突。但是实际cherry-pick和rebase生成新的commit时是merge生成的，而不是以目标commit为最终状态。
+
+例如：
+
+```
+       A---B---C topic
+      /
+D---E---F---G master
+```
+
+在topic上cherry-pick G，生成的G'的项目状态不是与G相同，而是以E为base，E,C,G进行三路合并后得到的(参考[git的三路合并与递归三路合并](https://segmentfault.com/a/1190000021712743))
+
+再例如：
+
+```
+       A---B---C topic
+      /
+D---E---A'---F master
+```
+在topic上rebase master，变成：(这里A和A'改动相同，committer信息不同，rebase操作会skip A并提示warning，见<https://git-scm.com/docs/git-rebase>)
+```
+               B'---C' topic
+              /
+D---E---A'---F master
+```
+这里的过程应该是：
+1. A被skip(估计是因为E,A,F三路合并发现相对F没有修改，所以git忽略了A，如果F改了A'改动的文件，三路合并结果也应该是由F决定，A好像也能skip)
+2. E,B,F三路合并成B'，接到F后面
+3. E,C,B'三路合并成C'，接到B'后面
+A对应的commit对象的parent列表中删除E(E---A这条边删除)，然后这里A没有其他parent commit。所以A---B---C这枝应该会被后续gc回收。
+
+总之，cherry-pick和rebase时，新的commit是三路合并生成的，所以出现conflict是由于其中隐含的merge行为。
+
+为什么两个人同时改同一个文件同一行，合并时会出现冲突：
+
+base 代表公共祖先commit
+
+ours 代表当前commit
+
+theirs 代表要合并进来的commit
+
+merge的时候，如果出现ours和theirs某一行的内容不相同，如果ours或者theirs的其中之一与base的这行相同，那git能知道是theirs或者ours相对base进行了修改，版本更新，会选择theirs/ours的那行内容。不过如果三者都不相同，那么就算git想抛弃base的这行，同时选择ours和theirs的这行，也没办法决定ours和theirs的两行谁在先，谁在后，只能报冲突。
+
+此外试了下发现这种情况git不会自动合并：
+```
+  c1
+ /
+c0---c2
+
+c0的test.txt为空
+
+c1的test.txt为:
+unit1
+block1
+unit2
+unit3
+
+c2的test.txt为:
+unit1
+unit2
+block2
+unit3
+```
+这里unit代表相同的块(git应该是用最长公共子序列算法找公共部分)，block代表不同的块(增加或删除行)。
+
+原本以为c1和c2能自动merge为：
+```
+unit1
+block1
+unit2
+block2
+unit3
+```
+但是实际是报冲突，具体的合并的逻辑不知道是什么样的。(不过这里c0的test.txt要是和c1内容一样的话c1,c2肯定能自动merge)。
+
+这种情况：
+```
+  c1
+ /
+c0---c2
+
+c0的test.txt为:
+a
+b
+c
+d
+
+c1的test.txt为:
+1
+a
+b
+c
+d
+
+c2的test.txt为:
+a
+b
+c
+d
+2
+```
+c1,c2还是能自动merge的：
+```
+1
+a
+b
+c
+d
+2
+```
 
 ### ubuntu下设置git默认编辑器为VSCode
 
