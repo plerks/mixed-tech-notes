@@ -127,25 +127,44 @@ cherry-pick也可以指定区间来挑选commit，`git cherry-pick <commitId1>
 ### github上的3种合并
 
 参考：
+* https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github#rebasing-and-merging-your-commits
 
+`Create a merge commit`会进行merge生成一个新的merge commit，如图：
+
+![standard-merge-commit-diagram](img/standard-merge-commit-diagram.png)
+
+效果等价于将pr分支merge到main：
 ```
-https://docs.github.com/cn/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github
-https://www.chenshaowen.com/blog/the-difference-of-tree-ways-of-merging-code-in-github.html
-https://www.runoob.com/git/git-commit-history.html
+git checkout Main
+git merge Feature
 ```
-`Create a merge commit`会合并commit并生成一个新的merge commit，如图：
 
-![standard-merge-commit-diagram](https://docs.github.com/assets/cb-5407/images/help/pull_requests/standard-merge-commit-diagram.png)
+最后会多出来3个commit对象(main上多出一个merge commit)，这个图结构可以用git log --graph看，单纯的git log不会展示旁枝。
 
-最后main上面会多出来3个commit，这个树形结构可以用git log --graph看
+`Squash and merge`会将commit压缩成一个，最终只会多一个commit，且没有多余的枝，如图：
 
-`Squash and merge`会将commit压缩成一个，最终只会多一个commit，且没有多余的分支信息（感觉像是github先通过git rebase -i压缩了commit，再合并），如图：
+![commit-squashing-diagram](img/commit-squashing-diagram.png)
 
-![commit-squashing-diagram](https://docs.github.com/assets/cb-5742/images/help/pull_requests/commit-squashing-diagram.png)
+效果等价于用rebase -i压缩再合并：
+```
+git checkout Feature
+git rebase -i Main //选择把E压到D中
+git checkout Main
+git merge Feature //会是fast-forward的合并
+```
+`Rebase and merge`和在本地rebase差不多，会将特性分支上相对于基的特有的commit摘出来，生成新的commit(三路合并生成的，见[cherry-pick和rebase为什么会出现冲突](#cherry-pick和rebase为什么会出现冲突))后接到基分支后面。不过[github文档](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github#rebasing-and-merging-your-commits>)里说github的rebase和git rebase略有区别，原文为:
+```
+Rebase and merge on GitHub will always update the committer information and create new commit SHAs, whereas git rebase outside of GitHub does not change the committer information when the rebase happens on top of an ancestor commit.
+```
+也即：github上的Rebase and merge总会更新committer，并生成新的commit。而对于git rebase，当rebase的目标commit位置为要rebase的分支的祖先commit时，committer信息不会变。这种情况下git rebase，git根本不需要动作，不会生成新的commit，这种情况举例来说是这样：
+```
+       A---B---C topic
+      /
+D---E---F---G master
+```
+这种情况下在topic上`git rebase E`，commit对象关系根本不会改变，直接就完成了。
 
-`Rebase and merge`会将特性分支上相对于基底的新的commit摘出来，接到基底分支后面。但参考链接https://docs.github.com/cn/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github说github的rebase和git rebase略有区别，还没研究。rebase and merge合并之后，下游提来的commit的commit id会变化。
-
-此外，github上的pr合并之后，commit记录里能看到作者和进行合入的人。git log本身只有作者信息(看author和committer信息要用git show的--format=fuller参数)。
+此外，github上的pr合并之后，网页上的commit记录里能看到作者和进行合入的人(committer)。git log本身只有作者信息(看author和committer信息要用git show的--format=fuller参数)。
 
 ### 拉取github的pr
 
@@ -277,7 +296,7 @@ https://www.runoob.com/git/git-reset.html
 
 	* `git reset --soft HEAD^3` 只把本地仓库重置成reset目标节点的内容，看起来就像是把reset目标节点之后的更改应用到暂存区。
 	* `git reset --mixed HEAD^3` --mixed是不写参数时的默认模式，把暂存区和本地仓库重置成reset目标节点的内容，看起来就像是把reset目标节点之后的更改应用到工作区。
-	* `git reset --hard HEAD^3` 把工作区、暂存区、本地仓库都重置为reset目标节点的内容，**慎用**，会导致内容无法恢复。
+	* `git reset --hard HEAD^3` 把工作区、暂存区、本地仓库都重置为reset目标节点的内容，**慎用**，会导致内容无法恢复。(不过就算本地和远程仓库都reset掉了，也可以使用`git reflog`找到reset之前HEAD指向的commit id，然后reset --hard回来。不过我估计reset --hard之后，被reset掉的那一枝的commit对象如果没有在其他分支上，完全成为孤儿树枝，可能会被git gc掉，然后reflog里也没有相应的记录了，恢复不回去)
 
 2. git reset也可以用来reset某个文件，参考git文档，
 
