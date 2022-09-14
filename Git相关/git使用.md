@@ -600,9 +600,10 @@ D---E---A'---F master
 D---E---A'---F master
 ```
 这里的过程应该是：
-1. A被skip(估计是因为E,A,F三路合并发现相对F没有修改，所以git忽略了A，如果F改了A'改动的文件，三路合并结果也应该是由F决定，A好像也能skip)
-2. E,B,F三路合并成B'，接到F后面
-3. E,C,B'三路合并成C'，接到B'后面
+1. 先找到C,F的最近公共祖先E，从而找出topic相对master特有的commit是A,B,C(即(E,C])，等待将A,B,C reapply到master
+2. A被skip(估计是因为E,A,F三路合并发现相对F没有修改，所以git忽略了A，如果F改了A'改动的文件，三路合并结果也应该是由F决定，A好像也能skip)
+3. E,B,F三路合并成B'，接到F后面
+4. E,C,B'三路合并成C'，接到B'后面
 A对应的commit对象的parent列表中删除E(E---A这条边删除)，然后这里A没有其他parent commit。所以A---B---C这枝应该会被后续gc回收。
 
 总之，cherry-pick和rebase时，新的commit是三路合并生成的，所以出现conflict是由于其中隐含的merge行为。
@@ -684,7 +685,49 @@ c
 d
 2
 ```
+这样一来，或许可以猜测一下git合并两个commit同一文件的逻辑。
 
+首先，找到两个commit的base后，用最长公共子序列算法找公共部分，这里记找出来的公共块为unit1,unit2,...
+
+然后这些公共块把要合并的文件进行了分隔，从而可以按块对齐：
+
+commit1的某个文件：block1 unit1 block2 unit2 block3 unit3 ...
+
+commit2的对应文件：block1' unit1 block2' unit2 block3' unit3 ...
+
+base的对应文件：block1^ unit1 block2^ unit2 block3^ unit3 ...
+
+(blocki,blocki',blocki^可能为空)
+
+然后现在就是要根据blocki^决定blocki,blocki'的取舍问题。
+
+* 若blocki与blocki'相同，则合并后取blocki，blocki'任一
+
+* 否则(blocki与blocki'不同)：
+  - 若blocki/blocki'与blocki^相同，那么合并要取的应该就是blocki'/blocki。
+  - 若blocki,blocki',blocki^两两不相同，此时报conflict，由用户对blocki,blocki'进行选择
+
+这样一来，上面那个
+```
+  c1
+ /
+c0---c2
+
+c0的test.txt为空
+
+c1的test.txt为:
+unit1
+block1
+unit2
+unit3
+
+c2的test.txt为:
+unit1
+unit2
+block2
+unit3
+```
+不能自动合并的原因就能理解了，上面的uniti理解为了c1,c2的公共块，实际git应该是要取c0,c1,c2三者的公共块，所以上面的例子实际uniti为空，按每行为一个block进行对齐，遇到c1,c2的同一行不相同就会报conflict。
 ### ubuntu下设置git默认编辑器为VSCode
 
 ubuntu下git默认的编辑器为GNU nano(例如`git commit`时的默认编辑器)，不太方便，windows下似乎是安装时会提示进行选择。要设置git默认编辑器为VSCode，运行`git config --global core.editor "code --wait"`，或者直接编辑~/.gitconfig，同样修改code.editor，例如：
