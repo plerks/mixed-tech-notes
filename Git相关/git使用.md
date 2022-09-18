@@ -104,7 +104,9 @@
 
 ---
 
-​	如果没注意直接往main分支上commit了，可以先checkout -b到workbr，然后在main分支上把commit reset掉。这样效果和commit提交到开发分支相同。然后main分支仍然用于同步。
+如果没注意直接往main分支上commit了，可以先checkout -b到workbr，然后在main分支上把commit reset掉。这样效果和commit提交到开发分支相同。然后main分支仍然用于同步。
+
+如果出现branchname和origin/branchname commit历史分叉，可以用`git pull --rebase`，或者`git fetch origin`，`git rebase origin/branchname`。(默认情况下git pull = git fetch + git merge，可以配置pull的时候默认rebase)
 
 ### git log打印出线性关系的策略
 git的commit对象的parent属性里存了父commit，从而将commit历史构成一个图。当merge操作生成了新的merge commit时，这个merge commit就会有两个父commit(甚至可以更多，[git merge](https://git-scm.com/docs/git-merge#Documentation/git-merge.txt-ltcommitgt82308203)可以指定多于2个commit进行合并)。
@@ -125,7 +127,7 @@ c0---c2(比c1新) topic
 
 `git log`还有个[--first-parent](https://git-scm.com/docs/git-log#Documentation/git-log.txt---first-parent)参数。`git log --first-parent`的时候只跟着first-parent打印。
 
-first-parent指commit对象的parent属性里记的第一个。例如，上面在topic上`git merge main`，则commit历史为：
+first-parent指commit对象的parent属性里记录的第一个父commit。例如，上面在topic上`git merge main`，则commit历史为：
 ```
   c1---c3(merge commit)
  /    /
