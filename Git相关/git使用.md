@@ -106,6 +106,37 @@
 
 ​	如果没注意直接往main分支上commit了，可以先checkout -b到workbr，然后在main分支上把commit reset掉。这样效果和commit提交到开发分支相同。然后main分支仍然用于同步。
 
+### git log打印出线性关系的策略
+git的commit对象的parent属性里存了父commit，从而将commit历史构成一个图。当merge操作生成了新的merge commit时，这个merge commit就会有两个父commit(甚至可以更多，[git merge](https://git-scm.com/docs/git-merge#Documentation/git-merge.txt-ltcommitgt82308203)可以指定多于2个commit进行合并)。
+
+实际使用时，**总是应当避免会生成merge commit的merge**。正确做法是先rebase，进行fast-forward的merge(只需向后移动分支指针的位置)。从而保持线性的commit历史，防止commit历史杂乱无章。
+
+虽然实际应当保持线性历史(所以其实不用关心下面的commit历史为非线性的图时`git log`的访问策略)，不过这里有个问题是，`git log`总是以列表的形式(线性)给出commit，即便此时用`git log --graph`看commit历史是一个非线性的图。那么`git log`的访问顺序是什么？
+
+没找到确切的说法，但是应该是BFS，然后深度相同的commit，commit时间大(较新)的先访问。
+
+对于
+```
+  c1 main
+ /
+c0---c2(比c1新) topic
+```
+这样的commit图，在topic上merge main生成c3后，`git log`出来的结果是c3,c2,c1,c0。(而且看起来git内部有记实际commit的时间，merge之前`git commit --amend --date`把c2的时间设置成比c1旧之后`git log`顺序没变)。此外，从[这个链接](https://juejin.cn/post/7004009215895273486)里的内容来推测也应该是BFS。
+
+`git log`还有个[--first-parent](https://git-scm.com/docs/git-log#Documentation/git-log.txt---first-parent)参数。`git log --first-parent`的时候只跟着first-parent打印。
+
+first-parent指commit对象的parent属性里记的第一个。例如，上面在topic上`git merge main`，则commit历史为：
+```
+  c1---c3(merge commit)
+ /    /
+c0---c2(比c1新)
+```
+此时main指向c1，topic指向c3，c3的parent为c2,c1(c2为first-parent)。对于merge commit，`git log`或者`git show`的时候会多这样一行：
+```
+Merge: 00ea2c6 b3956c7
+```
+(00ea2c6为first-parent)。
+
 ### git fetch获取远程分支
 
 git fetch origin会把所有远程分支拉下来(已有的话会更新)，git branch -a | -r能看到，没写remote默认为origin。
