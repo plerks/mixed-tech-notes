@@ -1,4 +1,4 @@
-windows下的git，进行push之类的操作的时候不需要每次都输账户名和access token(github现在是用access token，gitee是要输密码)，但是ubuntu下的git每次都需要输用户名和access token。
+windows下的git，进行push之类的操作的时候不需要每次都输账户名和access token(github现在是用access token，gitee是要输密码)，一般第一次push之类的时候会弹出来认证，后面就不需要了。但是ubuntu下的git每次都需要输用户名和access token。
 
 为了在ubuntu下不用每次都输用户名和access token，需要配置ssh。
 
