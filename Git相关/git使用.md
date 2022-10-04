@@ -283,7 +283,7 @@ This behavior is the default when the start point is a remote-tracking branch. S
 
 ### git show查看commit改动
 
-查看某个commit相对于上个commit的改动，除了用`git diff <commit>~ <commit>`，也可以用`git show <commit>`。例如查看最新一个commit的改动，就可以用`git show HEAD`(或者直接`git show`，默认show HEAD)。不过git show只能diff相邻的commit，不能diff隔开的commit。此外，git show有个--format参数，可以用来查看commit的committer信息，例如：`git show HEAD --format=fuller`。(committer和author有区别，如果完全是自己的仓，author和committer都会是自己，但是如果是在github上提pr，author会是自己，committer信息会是那个pr的合入者)
+查看某个commit相对于上个commit的改动，除了用`git diff <commit>~ <commit>`，也可以用`git show <commit>`。例如查看最新一个commit的改动，就可以用`git show HEAD`(或者直接`git show`，默认show HEAD)。不过git show只能diff相邻的commit，不能diff隔开的commit。此外，git show有个--format参数，可以用来查看commit的committer信息，例如：`git show HEAD --format=fuller`。(committer和author有区别，如果完全是自己的仓，author和committer都会是自己，但是如果是在github上提pr，author会是自己，committer信息会是那个pr的合入者。官方的文档只找到了[这个](https://git-scm.com/book/zh/v2/Git-%E5%9F%BA%E7%A1%80-%E6%9F%A5%E7%9C%8B%E6%8F%90%E4%BA%A4%E5%8E%86%E5%8F%B2)有说明committer的概念)
 
 `git show <commit> --format=fuller`的输出格式为：
 
@@ -298,9 +298,11 @@ CommitDate: <committer-date>
 <textual-diff>
 ```
 
+还有个--name-status参数指定只列出变更了的文件名和变更方式(不查看变更内容)：`git show --name-status`
+
 也可以`git show <commit> <pathspec>...`查看某次提交中的文件变化
 
-git log查看历史
+### git log查看历史
 
 `git log`查看commit历史
 
