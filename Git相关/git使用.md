@@ -302,6 +302,13 @@ CommitDate: <committer-date>
 
 也可以`git show <commit> <pathspec>...`查看某次提交中的文件变化
 
+### git log查看两个分支间的commit差异
+参考<https://blog.csdn.net/allanGold/article/details/87181284>，查看两个分支不同的commit有哪些，分别在哪个分支上。命令为：
+
+`git log --left-right branch1...branch2`，会显示branch1和branch2的commit差异，输出里左箭头`<`表示commit是branch1的，右箭头`>`表示commit是branch2的。
+
+这个`...`两侧好像不能随便加空格，试了一下左右加空格会导致结果变化(branch1 ... branch2和branch1 ...branch2只有`>`,branch1... branch2和branch1...branch2一致，奇怪)。
+
 ### git log查看历史
 
 `git log`查看commit历史
