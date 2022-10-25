@@ -1,12 +1,14 @@
 参考链接：
 
-https://developer.aliyun.com/article/728115
+* https://developer.aliyun.com/article/728115
 
-https://www.jianshu.com/p/80ad7ff37744
+* https://www.jianshu.com/p/80ad7ff37744
 
-https://z.itpub.net/article/detail/4A6E5050C092D3D3FFB12B69A2A39547
+* https://z.itpub.net/article/detail/4A6E5050C092D3D3FFB12B69A2A39547
 
-https://cloud.tencent.com/developer/article/1796826
+* https://cloud.tencent.com/developer/article/1796826
+
+* https://blog.51cto.com/rick/3257193
 
 集群中的一组pod为另一组pod提供服务，pod如何访问这个service?
 
@@ -34,7 +36,7 @@ REDIS_MASTER_PORT_6379_TCP_ADDR=10.0.0.11
 
 其他命名空间中的pod则使用`my-service.my-ns`域名来访问服务。
 
-对第二种方式，需要安装CoreDNS插件，插件的原理是配置pod的DNS解析，Linux 服务器中 DNS 解析配置位于/etc/resolv.conf，k8s配置了这个文件，从而访问时直接写service名当作域名就可以访问到对应的服务(访问不同命名空间的service要加上"."+对应namespace)。
+对第二种方式，需要安装CoreDNS插件，插件的原理是配置pod中的DNS解析，Linux中DNS解析配置位于/etc/resolv.conf，k8s配置了这个文件以及iptables，最终效果相当于将CoreDNS的容器配置成了域名服务器，DNS请求实际上会到CoreDNS容器中，从而访问时直接写service名当作域名就可以访问到对应的服务(访问不同命名空间的service要加上"."+对应namespace)。
 
 ### k8s非内网节点加入集群
 k8s的集群是连在一个内网内的，节点有自己的内网ip地址(应该是对应一个虚拟网卡)。如果有非同一子网的节点要加入集群，需要配置iptables规则进行转化，见[k8s非内网节点加入集群](https://blog.csdn.net/nswdiphone6/article/details/120067820)。
