@@ -67,7 +67,7 @@ https://www.servicemesher.com/blog/kubernetes-ingress-controller-deployment-and-
 3）ingress：将nginx的配置抽象成一个Ingress对象，当用户每添加一个新的服务，只需要编写一个新的yaml文件即可。
 ```
 
-也就是说，安装ingress controller的过程，实际上应该是安装了一个service(type=LoadBalancer)，一个deployment(这个deployment创建了nginx pod，这些nginx pod被service(type=LoadBalancer)选中)，以及ingress支持(用户创建ingress时，将ingress里写的规则更新到nginx pod里(这个不知道怎么做的))。所以安装好ingress controller之后再写ingress定义转发规则就可以了，ingress controller应该会把ingress定义的规则写到nginx pod里。现在的路径就是：客户访问 -> 云服务商提供的带公网ip的服务器 -> type=LoadBalancer的service -> ingress controller创建的nginx pod，然后nginx pod再根据自己内部的规则将请求转发到其它集群内的服务，nginx内部的规则来自用户创建的ingress。
+也就是说，安装ingress controller的过程，实际上应该是安装了一个service(type=LoadBalancer)，一个deployment(这个deployment创建了类似nginx的pod(用来支持url转发)，这些nginx pod被service(type=LoadBalancer)选中)，以及添加了ingress支持(用户创建更新ingress时，将ingress里写的规则更新到nginx pod里(这个不知道怎么做的，可能是这些nginx pod自己会从api server获取ingress对象更新自己))。所以安装好ingress controller之后再写ingress定义转发规则就可以了。现在的路径就是：客户访问 -> 云服务商提供的带公网ip的服务器 -> type=LoadBalancer的service -> ingress controller创建的nginx pod，然后nginx pod再根据自己内部的规则将请求转发到其它集群内的服务，nginx内部的规则来自用户创建的ingress。
 
 [Nginx Ingress Controller](https://kubernetes.github.io/ingress-nginx/deploy/)官网的有一种安装方式是`kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.2/deploy/static/provider/cloud/deploy.yaml`，查看这个yaml可以发现其中创建了这样一个Service：
 
@@ -204,16 +204,38 @@ spec:
 
 不过一般不应该把集群的3306端口暴露在集群外，应该是用config文件配置好了kubectl之后，用[kubectl port-forward](https://kubernetes.io/zh-cn/docs/tasks/access-application-cluster/port-forward-access-application-cluster/#%E8%BD%AC%E5%8F%91%E4%B8%80%E4%B8%AA%E6%9C%AC%E5%9C%B0%E7%AB%AF%E5%8F%A3%E5%88%B0-pod-%E7%AB%AF%E5%8F%A3)在本机创建代理，例如：`kubectl port-forward service/db-mysql-cluster-ip 6000:3306 -n mynamespace`，然后连本机的6000端口连接到数据库。
 
-如果不是云服务商提供的k8s，要对外暴露服务的话就应该用type=NodePort的service，然后service后面用nginx pod来做负载均衡(和ingress controller的方式相同)，把不同的请求分发到不同的业务容器。
+如果不是云服务商提供的k8s，要对外暴露服务的话就应该用type=NodePort的service，然后service后面用nginx pod来做url转发和负载均衡(和ingress controller的方式相同)，把不同的请求分发到不同的业务容器。
 
-PS:
+实际做的时候，只需要先装[nginx ingress controller](https://kubernetes.github.io/ingress-nginx/deploy/)，然后把nginx ingress controller创建的那个LoadBalancer类型的service手动改成NodePort类型的，并修改对应端口为80和443(要先[改NodePort的端口范围](https://kuboard.cn/install/install-node-port-range.html)，不然NodePort类型的service的port不能用80和443)。不过其实也可以只改端口，不把那个LoadBalancer类型的Service改成NodePort类型的，因为LoadBalancer既是ClusterIP，也是NodePort，不过不改成NodePort的话那个Service的EXTERNAL-IP会一直显示为pending(因为没云厂商提供公网ip)。这样操作下来集群的入口就是任意一个有公网ip的Node，不像云厂商环境下的LoadBalancer一样是通过外部的一个公网ip地址负载均衡到各个Node。
 
----
+### 关于NodePort,ClusterIP,LoadBalancer
 
-NodePort类型的Service会在所有节点上设置路由规则(感觉ClusterIP和LoadBalancer类型的service估计也应该是每个节点上都会设置路由规则)，<https://kubernetes.io/zh/docs/concepts/services-networking/service/>原话：
+三种Service都会在所有节点上设置路由规则，只是设置的规则不一样，最终实现的效果不一样。
 
-如果你将 `type` 字段设置为 `NodePort`，则 Kubernetes 控制平面将在 `--service-node-port-range` 标志指定的范围内分配端口（默认值：30000-32767）。   **每个节点将那个端口（每个节点上的相同端口号）代理到你的服务中。**
+创建NodePort类型的Service(port范围由`--service-node-port-range`标志限定，默认30000-32767)，每个节点都会将对那个port的访问代理到容器中，最终的效果是每个节点(包括Master和Node)上都开了端口，<任一节点的任一ip>:<NodePort类型的Service指定的端口号>，都会访问到Service选中的pod。
 
-所以NodePort类型的Service最终的效果是每个节点(包括Master和Node)上都开了端口，<任一节点的ip>:<NodePort类型的Service指定的端口号>，都会访问到Service选中的pod。
+但是k8s并不是在每个节点上起了个server，而是配置了iptables的转发规则，NodePort对应的端口不是有一个进程在监听，可以在Node上起一个那个端口的server，但是因为流量会先被iptables的规则转发，所以起的server会访问不到。
 
----
+具体来说：参考<https://yuerblog.cc/2019/12/09/k8s-%E6%89%8B%E6%8A%8A%E6%89%8B%E5%88%86%E6%9E%90service%E7%94%9F%E6%88%90%E7%9A%84iptables%E8%A7%84%E5%88%99/>
+，对于NodePort类型的service，转发规则就是：
+```
+dst ip是node自己，并且dst port是NodePort端口的流量，将其改写到service的某个endpoints
+```
+这里的dst ip，当node有多个ip地址时，任意一个ip:<NodePort端口>都可以用来访问(包括localhost)。因为配置规则是`--dst-type LOCAL`，参考<https://www.jianshu.com/p/f0dee39b20ba>：`LOCAL:表示地址是本地地址，指本地一切地址含：127.0.0.1回环地址`。
+
+此外，NodePort类型的Service也会有个ClusterIP，[官网](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)说明如下：
+```
+NodePort: Exposes the Service on each Node's IP at a static port (the NodePort). To make the node port available, Kubernetes sets up a cluster IP address, the same as if you had requested a Service of type: ClusterIP.
+```
+
+如果是ClusterIP，转发规则就是：
+```
+dst ip是ClusterIP(内网地址)的包，把dst ip改写成service的某个endpoints的ip地址。
+```
+所以ClusterIP类型的service只能在集群内用分配的ClusterIP访问
+
+LoadBalancer按[参考链接](https://yuerblog.cc/2019/12/09/k8s-%E6%89%8B%E6%8A%8A%E6%89%8B%E5%88%86%E6%9E%90service%E7%94%9F%E6%88%90%E7%9A%84iptables%E8%A7%84%E5%88%99/)的说法既是NodePort，也是ClusterIP，[官网](https://kubernetes.io/zh-cn/docs/concepts/services-networking/service/#publishing-services-service-types)也有说:
+```
+LoadBalancer：使用云提供商的负载均衡器向外部暴露服务。外部负载均衡器可以将流量路由到自动创建的NodePort服务和ClusterIP服务上。
+```
+也就是说，LoadBalancer既是一个NodePort，也是一个ClusterIP，云厂商只需要检测到用户创建了LoadBalancer类型的Service后，分配一个公网ip，然后把这个公网ip的流量负载均衡到用户集群的各个Node上。
