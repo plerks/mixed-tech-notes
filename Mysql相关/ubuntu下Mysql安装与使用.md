@@ -34,19 +34,19 @@ mysql > GRANT ALL PRIVILEGES ON *.* TO 'gxy'@'%'IDENTIFIED BY '远程访问密�
 ### 导入导出数据
 导出数据
 1. 导出整个数据库
-    * `mysqldump -u 用户名 -h 主机名 -p 数据库名 > 导出的.sql文件路径`
+    * `sudo mysqldump -u 用户名 -h 主机名 -p 数据库名 > 导出的.sql文件路径`
 2. 导出一个表
-    * `mysqldump -u 用户名 -h 主机名 -p 数据库名 表名 > 导出的.sql文件路径`
+    * `sudo mysqldump -u 用户名 -h 主机名 -p 数据库名 表名 > 导出的.sql文件路径`
 3. 导出整个数据库结构(不包含数据)
-    * `mysqldump -u 用户名 -h 主机名 -p -d 数据库名 > 导出的.sql文件路径`
+    * `sudo mysqldump -u 用户名 -h 主机名 -p -d 数据库名 > 导出的.sql文件路径`
 4. 导出一个表结构(不包含数据)
-    * `mysqldump -u 用户名 -h 主机名 -p -d 数据库名 表名 > 导出的.sql文件路径`
+    * `sudo mysqldump -u 用户名 -h 主机名 -p -d 数据库名 表名 > 导出的.sql文件路径`
 
 导入数据
 
 方法一:
 1. 先进入数据库
-    * `mysql -u 用户名 -h 主机名 -P mysql-server端口 -p`
+    * `sudo mysql -u 用户名 -h 主机名 -P mysql-server端口 -p`
 2. 选中对应的数据库
     * mysql > `use database-name;`
 3. 导入数据(source命令)
@@ -54,4 +54,15 @@ mysql > GRANT ALL PRIVILEGES ON *.* TO 'gxy'@'%'IDENTIFIED BY '远程访问密�
 
 方法二:
 
-`mysql -u 用户名 -p 数据库名 < .sql文件路径`
+`sudo mysql -u 用户名 -p 数据库名 < .sql文件路径`
+
+数据转移时可能会出现中文乱码的问题，参考：
+* https://blog.csdn.net/xyw_blog/article/details/25157761
+* https://blog.csdn.net/qq_39521554/article/details/78925440
+* https://www.yisu.com/zixun/315339.html
+
+需要把编码设置为一致：
+
+导出时：`mysqldump -uroot -p --default-character-set=utf8 database-name > data.sql`
+
+导入时：`mysql -uroot -p --default-character-set=utf8 database-name < data.sql`
