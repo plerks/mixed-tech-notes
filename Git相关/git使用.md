@@ -558,6 +558,8 @@ s 133a449 add Controller.java
 s 13ea7f9 add User.java
 ```
 
+一般压缩的话p,s,s就可以
+
 保存之后会弹出来一个新的编辑页面:
 
 ```
@@ -612,6 +614,17 @@ b881b80 add Test.java
 `git rebase`除了以一个别的分支为基准，也可以以当前分支为基准rebase(可以更方便地squash)，例如，在workbr上`git rebase -i HEAD~3`会列出workbr最新的3个commit以供操作(这里不写-i运行后不会有任何变化，因为默认是pick，不写-i含义是pick workbr上的最新3个commit)。`git rebase -i --root`直接从最开始的commit开始rebase。
 
 补充：[cherry-pick和rebase为什么会出现冲突](#cherry-pick和rebase为什么会出现冲突)
+
+### git commit的--amend参数
+git commit的--amend参数能用来修改HEAD。例如`git commit --amend --date="2022-05-31T23:59:15+0800"`修改HEAD的日期，或者直接`git commit --amend`修改HEAD的commit message。
+
+还有个简便用途是，提交了一个commit后，有一些改动，想和HEAD合成一个commit。此时可以commit后`git rebase -i HEAD~2`，也可以:
+
+`git add -A` (必须add，--amend的操作和commit然后用rebase -i HEAD~2压缩是一样的)
+
+`git commit --amend --no-edit` (加上--no-edit参数不会弹出commit message的editor)
+
+合并之后commit id会变
 
 ### cherry-pick和rebase为什么会出现冲突
 参考[Git底层数据结构和原理](https://www.jiqizhixin.com/articles/2020-05-20-3)：git对文件版本的管理理念是以每次提交为一次快照，提交时对所有文件做一次全量快照。
