@@ -24,7 +24,7 @@
 ## 关闭连接
 关闭连接有四次握手应该是因为TCP有半关闭状态。一次FIN与FIN的ACK之后，应该是FIN的发送方会关闭自己的输出缓冲，另一方关闭自己的输入缓冲。
 
-调shutdown(fd, SHUT_WR)应该是会发FIN包给对面。(shutdown(fd, SHUT_WR)之后再write()，VSCode运行会提示: Exception has occurred.Broken pipe，ubuntu终端运行直接退出)
+调shutdown(fd, SHUT_WR)应该是会发FIN包给对面。(shutdown(fd, SHUT_WR)之后再write()，VSCode通过插件运行会提示: Exception has occurred.Broken pipe，ubuntu终端运行直接退出无提示，VSCode插件运行能给出提示应该是因为插件是用gdb运行的，能靠gdb捕捉异常。ubuntu终端运行时如果是segmentation fault会有提示Segmentation fault (core dumped))
 
 调shutdown(fd, SHUT_RD)应该是会关闭套接字的输入缓冲，操作系统仍会ACK对面，但用户进程不再能通过read()读取数据。(shutdown(fd, SHUT_RD)之后再read()，直接返回0)。
 
