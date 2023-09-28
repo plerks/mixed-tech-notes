@@ -18,7 +18,7 @@ public class MultipleConditionSortDemo {
                 return x.endDate < y.endDate ? -1 : 1;
             }
             if (x.id != y.id) {
-                return x.id < y.id ? -1 : 1;
+                return x.id < y.id ? -1 : 1;  // 直接写return x.id - y.id可能会有Integer.MIN_VALUE - 1 > 0导致排序错误的问题
             }
             return 0;
         });
