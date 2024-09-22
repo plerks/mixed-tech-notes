@@ -107,4 +107,4 @@ class Person {
 这里`<? extends Square>`，只知道是某个Square子类，但是具体是哪种不知道，因此add任何类型都不安全，但是get出来要赋值时只要是Square或Square的父类就是可以安全赋值的。
 
 ### C++里的template
-C++的泛型是真泛型，运行时也有泛型信息，不过参考[这个](https://stackoverflow.com/questions/1806964/is-there-equivalent-of-extends-t-super-t-in-c)，C++的泛型里没Java泛型这样的extends和super。
+C++的泛型的能力比Java强，模板参数会根据实际的类型走一遍编译器生成实例化的类及函数，不需要这种extends和super。
