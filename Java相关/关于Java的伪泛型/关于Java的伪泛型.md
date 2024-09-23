@@ -108,3 +108,222 @@ class Person {
 
 ### C++里的template
 C++的泛型的能力比Java强，模板参数会根据实际的类型走一遍编译器生成实例化的类及函数，不需要这种extends和super。
+
+### Java伪泛型的实现方式
+参考
+
+<https://docs.oracle.com/javase/tutorial/java/generics/erasure.html>
+
+<https://docs.oracle.com/javase/tutorial/java/generics/genTypes.html>
+
+
+Generics were introduced to the Java language to provide tighter type checks at compile time and to support generic programming. To implement generics, the Java compiler applies type erasure to:
+
+* Replace all type parameters in generic types with their bounds or Object if the type parameters are unbounded. The produced bytecode, therefore, contains only ordinary classes, interfaces, and methods.
+
+* Insert type casts if necessary to preserve type safety.
+
+* Generate bridge methods to preserve polymorphism in extended generic types.
+
+Type erasure ensures that no new classes are created for parameterized types; consequently, generics incur no runtime overhead.
+
+1.擦除类型，然后用bound替换，这里的bound应该指上界。例如，`class Node<T> {...}`，编译时T被擦除为Object；`class Node<T extends Number> {...}`，编译时T被擦除为Number；`class Node<T super Number> {...}`应该也是擦除为Object。
+
+[参考链接](https://docs.oracle.com/javase/tutorial/java/generics/genTypes.html)里的例子：
+```Java
+public class Node<T> {
+
+    private T data;
+    private Node<T> next;
+
+    public Node(T data, Node<T> next) {
+        this.data = data;
+        this.next = next;
+    }
+
+    public T getData() { return data; }
+    // ...
+}
+```
+擦除为：
+```Java
+public class Node {
+
+    private Object data;
+    private Node next;
+
+    public Node(Object data, Node next) {
+        this.data = data;
+        this.next = next;
+    }
+
+    public Object getData() { return data; }
+    // ...
+}
+```
+
+```Java
+public class Node<T extends Comparable<T>> {
+
+    private T data;
+    private Node<T> next;
+
+    public Node(T data, Node<T> next) {
+        this.data = data;
+        this.next = next;
+    }
+
+    public T getData() { return data; }
+    // ...
+}
+```
+擦除为：
+```Java
+public class Node {
+
+    private Comparable data;
+    private Node next;
+
+    public Node(Comparable data, Node next) {
+        this.data = data;
+        this.next = next;
+    }
+
+    public Comparable getData() { return data; }
+    // ...
+}
+```
+注意，以上这两个都是定义了一个Node泛型类，不能两种同时存在，所以不存在：编译器如何区分这两个都叫Node的类的问题。
+
+而
+```Java
+ArrayList<? super Number> list1 = new ArrayList<>();
+ArrayList<Number> list2 = new ArrayList<>();
+```
+是在声明类型，不存在导致生成两个Node类的问题，这里的`<? super Number>`和`<Number>`只存在在符号表里，用作类型安全的考量。
+
+2.在必要的地方插入类型转换，见[这个链接](https://www.zhihu.com/question/660964701/answer/3577600043)里的例子：
+
+```Java
+public class GenericExample<T> {
+    private T value;
+
+    public GenericExample(T value) {
+        this.value = value;
+    }
+
+    public T getValue() {
+        return value;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        GenericExample<String> stringExample = new GenericExample<>("Hello, World!");
+        System.out.println(stringExample.getValue());
+    }
+}
+```
+处理为：
+```Java
+public class GenericExample {
+    private Object value;
+
+    public GenericExample(Object value) {
+        this.value = value;
+    }
+
+    public Object getValue() {
+        return value;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        GenericExample stringExample = new GenericExample("Hello, World!");
+        System.out.println((String)stringExample.getValue());
+    }
+}
+```
+
+### Java伪泛型导致的限制
+
+**禁止泛型数组**
+
+参考<https://www.zhihu.com/question/20928981/answer/39234969>
+
+Java禁止创建泛型数组，例如下面这样
+```Java
+ArrayList<Integer>[] arr = new ArrayList<>[3];
+```
+不能编译通过。
+
+Java禁止这样做的原因在于：Java里若A是B的父类，则A[]也被认为是B[]的父类，于是，Object[]数组是任何数组的父类。
+
+于是可以这样做：
+```Java
+ArrayList<Integer>[] arr = new ArrayList[3];
+Object[] objArr = arr;
+objArr[0] = new ArrayList<String>();
+arr[0].add(1); // 实际应当是ArrayList<String>的，放进去了Integer
+System.out.println(arr[0].get(0));
+```
+这样写是能编译运行的，造成的效果是把一个Integer放进了`ArrayList<String>`，违背了类型安全，但是由于运行时都是Object，这里代码实际也能运行。
+
+应该是为了避免这种迷惑性及可能导致的问题，Java禁止了泛型数组的写法，但是可以用raw type的写法避开，例如`ArrayList<Integer>[] arr = new ArrayList[3];`或者直接`ArrayList[] arr = new ArrayList[3];`，由于历史遗留问题，Java又不能直接禁止raw type的写法。不过用raw type，本质没发生改变。
+
+泛型数组的一个更严重的例子：
+```Java
+ArrayList[] arr = new ArrayList[3];
+Object[] objArr = arr;
+objArr[0] = new String("aa");
+arr[0].add(1);
+System.out.println(arr[0].get(0));
+```
+这样的代码能编译运行，不过在`objArr[0] = new String("aa");`这行会被运行时的类型检查检查出来往数组里放的元素类型不对。
+
+**对泛型所知的信息有限**
+
+Java里这样写，`t.sayName()`那里会直接报错The method sayName() is undefined for the type T。因为编译器根本不知道T有没有sayName()方法。
+```Java
+class MyContainer<T> {
+    public void call(T t) {
+        t.sayName();
+    }
+}
+
+class Person {
+    public void sayName() {
+        System.out.println("Tom");
+    }
+}
+```
+
+而C++里这样写：
+```cpp
+template<typename T>
+class MyContainer {
+public:
+    void call(T t) {
+        t.sayName();
+    }
+};
+
+class Person {
+public:
+    void sayName() {
+        cout << "Tom" << endl;
+    }
+};
+
+int main(int argc, char const *argv[]) {
+    MyContainer<Person> c;
+    c.call(Person());
+    return 0;
+}
+```
+能正常编译运行，如果Person没定义sayName()函数也能在编译时报错，因为模板根据实际类型过了一遍编译器去生成实际的类型。
+
+**泛型参数限制为对象**
+
+Java的伪泛型没去生成实际的类型，实际用的是同一个，而Java的所有对象名都是一个指针，刚好长度是相同的，所以也不会有什么问题。但是如果泛型参数可以为各种长度的类型，例如float和double，那么用那个泛型参数都处理为Object的类就会有问题（例如一个泛型类有一个float成员或是一个double成员，struct的长度就根本不一样），所以要把泛型参数限制为对象。
