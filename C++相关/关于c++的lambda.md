@@ -34,7 +34,7 @@ public:
 
 使用lambda的地方：
 int a = 1;
-LambdaClass lambda(a);
+auto lambda = LambdaClass(a);
 lambda(2);
 ```
 
@@ -54,7 +54,7 @@ public:
 
 使用lambda的地方：
 int a = 1;
-LambdaClass lambda(a);
+auto lambda = LambdaClass(a);
 lambda(2);
 ```
 
