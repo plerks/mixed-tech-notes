@@ -207,6 +207,33 @@ fn main() {
 ## 杂项
 rust没有operator++和--，不允许函数重载，也不允许默认参数值，也不允许可变参数个数(宏函数可以实现可变参数个数)。
 
+但是泛型特化之后，不同特型可以定义同名的函数，例如[Cow](https://doc.rust-lang.org/std/borrow/enum.Cow.html#impl-From%3C%26ByteStr%3E-for-Cow%3C'a,+ByteStr%3E)有`fn from(s: &'a [T]) -> Cow<'a, [T]>`、`fn from(v: Vec<T>) -> Cow<'a, [T]>`等多个方法。例如：
+```Rust
+struct Circle<T> {
+    val: T
+}
+
+impl Circle<bool> {
+    fn f(&self, x: bool) {
+        println!("bool: {}", x);
+    }
+}
+
+impl Circle<u64> {
+    fn f(&self, x: u64) {  // 定义成fn f(&self, x: bool)也行
+        println!("u64: {}", x);
+    }
+}
+
+fn main() {
+    let c1: Circle<bool> = Circle { val: true };
+    c1.f(true);
+    let c2: Circle<u64> = Circle { val: u64::MAX };
+    c2.f(6);
+}
+```
+毕竟`Circle<bool>`和`Circle<u64>`是两种类型，所以可以各自拥有一个自己的`f()`。
+
 rust的enum更像union，里面应该是有个隐藏的值，区分当前enum实例是哪种类型，所以就算内容部分相等了，类型不同还是不同。
 然后rust enum里面写的全是enum constructor，根据参数把当前enum实例初始化。但是如果是在match中，例如Message::ChangeColor(r, g, b)这样的写法并不是在调用constructor，而是在匹配并解构，根据enum隐藏的type_id(不一定叫这名，只是表达enum要有个隐藏字段区分enum现在具体是什么类型)，去匹配enum实例的类型，并解构出变量。
 
