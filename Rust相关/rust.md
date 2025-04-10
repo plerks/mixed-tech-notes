@@ -11,6 +11,32 @@
 
 rust的函数必须明确写出参数类型和返回值类型。且不像C++那样无论形参是T&还是T，实参都是写t。rust想传引用时实参要写成&t，所以可以一眼看出是传值还是传引用。
 
+## Copy trait和Clone trait
+Copy trait是个标记trait，其内部没有定义方法。对于实现了Copy trait的类型的传值，rust编译器采用直接内存拷贝(memcpy)的方式进行该类型的复制。由于是直接的内存拷贝，所以不需要手动写出具体的拷贝逻辑，编译器直接就知道该怎么做。
+
+[Copy trait](https://doc.rust-lang.org/std/marker/trait.Copy.html)的官方文档描述:
+```Rust
+Types whose values can be duplicated simply by copying bits.
+By default, variable bindings have ‘move semantics.’
+```
+也就是说，例如一个对象o有个方法f(self)，若未impl Copy trait，则使用移动语义，调用o.f()后会让变量o失效；若impl Copy trait，则表明内存复制即可完成拷贝，rust直接使用内存复制，调用后o仍然有效。
+
+Copy相当于c++的浅拷贝，如果一个类型含有动态内存，就不能简单地用Copy trait的功能实现复制了，否则就会导致悬空指针和双重释放。
+
+Rust规定：只有所有的成员都实现Copy trait，这个类型才能实现Copy trait，像String这样含有动态内存的对象，不符合Copy trait的定义："can be duplicated simply by copying bits"，所以就不会去实现Copy trait。所以，如果一个类型含有动态内存却去实现Copy trait，rust编译器能检查出来。
+
+那如果一个类型含有动态内存并要传值怎么办？
+
+不实现Copy trait，使用默认的move传值或者实现Clone trait并调用.clone()。
+
+[Clone trait](https://doc.rust-lang.org/std/clone/trait.Clone.html)用于定义深拷贝，针对含动态内存的对象，纯栈对象不需要深拷贝。
+
+对于Clone，必须显式调用.clone()才能复制。不是像c++那样，定义了拷贝构造函数后，传值时就会自动调用拷贝构造函数。Rust的传值看有无Copy trait，发生move传值或copy传值。
+
+Rust要求：实现Copy必须同时实现Clone，实现Clone不要求实现Copy。
+
+如果需要实现的话，一般情况用derive即可满足要求，`#[derive(Copy, Clone)]`。一个类型能实现Copy要求每个成员都实现了Copy，自动生成的clone方法会用每个成员的clone方法。
+
 ## 多重引用
 如下代码：
 ```Rust
@@ -132,6 +158,8 @@ rust不把泛型设计成c++的模板那样，虽然要声明trait类型麻烦�
 当编译好泛型后，如果实际调用不合法，rust只需根据泛型入口处的类型要求不满足即可报错，而C++则需要进入模版内部，在内部的行处报错，因此报错信息一大堆。
 
 两种实现方式的特点是，rust在编译泛型时即可知道泛型代码是否合法，而c++要到编译实际使用了模板的代码时才能知道。
+
+rust采用这种泛型类型约束的设计应该是有必要的，例如rust规定了一个类型能实现Copy要求每个成员都实现了Copy，假如我想定义一个泛型类型，要求其泛型成员都要满足Copy，这就需要语言提供泛型约束功能。
 
 rust显式指明泛型类型的话得用turbofish写法(::<>)，例如`HashMap::<String, u32>`，`HashMap<String, u32>`不行。
 

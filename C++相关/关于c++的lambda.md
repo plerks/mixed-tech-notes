@@ -82,6 +82,8 @@ struct Solution {
 
 LeetCode855那题写成捕获局部变量n然后运行不会直接出问题，要开san才会有报错：`AddressSanitizer: stack-use-after-return on address ...`
 
+rust里有生命周期的检查，编译器会阻止这样的代码编译。
+
 ## lambda的operator()是const函数吗
 默认情况下，值捕获的变量在lambda的函数体内不可修改，lambda的operator()是const函数。使用mutable可以解除这个限制，这样operator()就不是const了。(注意mutable仅影响按值捕获的变量，且不论有没有mutable，引用捕获的变量都可以修改，引用捕获的变量可以修改不影响operator()是const)
 
