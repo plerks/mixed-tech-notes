@@ -124,6 +124,20 @@ fn main() {
 ```
 这里`move |y| x + y`，捕获的x是i32，实现了copy trait，这个闭包实际类型是个`impl Fn(i32) -> i32`的匿名类型。但是返回值声明为只实现了 FnOnce trait (这个trait类型转换是安全的)，所以编译main时不允许调用多次。
 
+注意区分`impl Trait`作为函数参数类型，与`Trait`作为泛型约束，二者有点像：
+```Rust
+// impl Trait 作为参数
+fn make_closure2(f: impl Fn(i32) -> i32) -> impl Fn(i32) -> i32 {
+    f
+}
+
+// Trait 作为泛型约束。见 ./rust闭包作为属性.md
+struct Heap<F: Fn(i32, i32) -> bool> { // F的泛型约束：Fn(i32, i32) -> bool
+    comp: F,
+    data: Vec<i32>
+}
+```
+
 这里用`impl FnOnce(i32) -> i32`来表示返回值类型，编译器知道实际的类型是什么，大小为多大，能生成正确的汇编代码吗？
 
 知道，编译器知道匿名类型的大小，能生成正确的汇编代码：
@@ -154,7 +168,7 @@ fn main() {
 Type: main::make_closure::{{closure}}
 Size: 4
 ```
-虽然写的是`impl Fn(i32) -> i32`，但是编译器知道具体类型是什么，能生成正确的汇编代码，可以把`impl Fn(i32) -> i32`这个写法看成auto。
+虽然写的是`impl Fn(i32) -> i32`，但是编译器知道具体类型是什么，能生成正确的汇编代码，**可以把`impl Fn(i32) -> i32`这个写法看成auto**。
 
 这里获取闭包的类型名，调用的是`intrinsics::type_name::<T>()`
 ```Rust
